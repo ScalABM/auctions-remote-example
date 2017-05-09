@@ -37,7 +37,7 @@ object LookupApplication {
   /** Starts the remote trading system. */
   def startRemoteTradingSystem(): Unit = {
     val tradingSystem = ActorSystem("TradingSystem", ConfigFactory.load("trading"))
-    val auctionService = "akka.tcp://AuctionSystem@127.0.0.1:2553/user/auction"
+    val auctionService = "akka://AuctionSystem@127.0.0.1:2553/user/auction"
     for (i <- 1 to 10) yield {
       val issuer = UUID.randomUUID()
       tradingSystem.actorOf(Props(classOf[TradingActor], issuer, auctionService), issuer.toString)
@@ -48,7 +48,7 @@ object LookupApplication {
   /** Starts the remote auction system. */
   def startRemoteAuctionSystem(): Unit = {
     val auctionSystem = ActorSystem("AuctionSystem", ConfigFactory.load("auction"))
-    val settlementService = "akka.tcp://SettlementSystem@127.0.0.1:2554/user/settlement"
+    val settlementService = "akka://SettlementSystem@127.0.0.1:2554/user/settlement"
     auctionSystem.actorOf(Props(classOf[ContinuousDoubleAuctionActor[Tradable]], settlementService), "auction")
     println("Started AuctionSystem - waiting for orders!")
   }
