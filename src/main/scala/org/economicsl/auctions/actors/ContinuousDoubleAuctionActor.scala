@@ -18,7 +18,8 @@ package org.economicsl.auctions.actors
 import akka.actor.{Actor, ActorIdentity, ActorRef, Identify, ReceiveTimeout, Terminated}
 import org.economicsl.auctions.Tradable
 import org.economicsl.auctions.singleunit.pricing.MidPointPricingPolicy
-import org.economicsl.auctions.singleunit.{DoubleAuction, Order}
+import org.economicsl.auctions.singleunit.Order
+import org.economicsl.auctions.singleunit.twosided.DoubleAuction
 
 import scala.concurrent.duration._
 
