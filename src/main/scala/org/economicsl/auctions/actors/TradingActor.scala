@@ -40,8 +40,12 @@ class TradingActor[T <: Tradable](uuid: UUID, path: String, tradable: T) extends
       context.watch(auctionService)
       context.become(active(auctionService))
 
-      // send orders every once an a while...
-      context.system.scheduler.schedule(1.second, 1.second) {
+      // order arrival is a Poisson process
+      val initialDelay = Random.nextInt(5)
+      val sendOrderRate = Random.nextInt(10)
+      val sendOrderInterval = quantile(sendOrderRate)(Random.nextDouble())  // exponential RV!
+
+      context.system.scheduler.schedule(initialDelay.seconds, sendOrderInterval.seconds) {
         val limit = Price(Random.nextInt(10000))
         if (Random.nextFloat() < 0.5) {
           self ! SendAskOrder(limit)
@@ -51,8 +55,11 @@ class TradingActor[T <: Tradable](uuid: UUID, path: String, tradable: T) extends
 
       } (context.system.dispatcher)
 
-      // request price quotes every once and while...
-      context.system.scheduler.schedule(2.second, 1.second) {
+      // order arrival is a Poisson process
+      val quoteRequestArrivalRate = Random.nextInt(5)
+      val quoteRequestInterval = quantile(quoteRequestArrivalRate)(Random.nextDouble())  // exponential RV!
+
+      context.system.scheduler.schedule(initialDelay.seconds, quoteRequestInterval.seconds) {
         val threshold = Random.nextFloat()
         if (threshold < 0.33) {
           self ! RequestAskPriceQuote
@@ -81,8 +88,8 @@ class TradingActor[T <: Tradable](uuid: UUID, path: String, tradable: T) extends
     case RequestSpreadQuote =>
       auctionService ! SpreadQuoteRequest()
 
-    // TODO: how to respond differently to the differnt types of quotes?
-    case Some(AskPriceQuote(quote)) => log.info(quote.toString)
+    // TODO: how to respond differently to the different types of quotes?
+    case quote: Option[AskPriceQuote] => log.info(quote.toString)
     case quote: Option[BidPriceQuote] => log.info(quote.toString)
     case quote: Option[SpreadQuote] => log.info(quote.toString)
 
@@ -103,5 +110,9 @@ class TradingActor[T <: Tradable](uuid: UUID, path: String, tradable: T) extends
   case object RequestBidPriceQuote
 
   case object RequestSpreadQuote
+
+  private[this] def quantile(arrivalRate: Double)(probability: Double): Double = {
+    -math.log(1 - probability) / arrivalRate
+  }
 
 }
