@@ -34,13 +34,17 @@ object LookupApplication {
       startRemoteSettlementSystem()
   }
 
+  case class AppleStock(tick: Long = 1) extends Tradable
+
+  val tradable: AppleStock = AppleStock()
+
   /** Starts the remote trading system. */
   def startRemoteTradingSystem(): Unit = {
     val tradingSystem = ActorSystem("TradingSystem", ConfigFactory.load("trading"))
     val auctionService = "akka://AuctionSystem@127.0.0.1:2553/user/auction"
     for (i <- 1 to 10) yield {
       val issuer = UUID.randomUUID()
-      tradingSystem.actorOf(Props(classOf[TradingActor], issuer, auctionService), issuer.toString)
+      tradingSystem.actorOf(Props(classOf[TradingActor[AppleStock]], issuer, auctionService, tradable), issuer.toString)
     }
     println("Started TradingSystem!")
   }
@@ -49,7 +53,7 @@ object LookupApplication {
   def startRemoteAuctionSystem(): Unit = {
     val auctionSystem = ActorSystem("AuctionSystem", ConfigFactory.load("auction"))
     val settlementService = "akka://SettlementSystem@127.0.0.1:2554/user/settlement"
-    auctionSystem.actorOf(Props(classOf[ContinuousDoubleAuctionActor[Tradable]], settlementService), "auction")
+    auctionSystem.actorOf(Props(classOf[ContinuousDoubleAuctionActor[AppleStock]], settlementService), "auction")
     println("Started AuctionSystem - waiting for orders!")
   }
 

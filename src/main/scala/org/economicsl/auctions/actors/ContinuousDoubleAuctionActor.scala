@@ -17,9 +17,10 @@ package org.economicsl.auctions.actors
 
 import akka.actor.{Actor, ActorIdentity, ActorRef, Identify, ReceiveTimeout, Terminated}
 import org.economicsl.auctions.Tradable
+import org.economicsl.auctions.quotes.{AskPriceQuoteRequest, BidPriceQuoteRequest, SpreadQuoteRequest}
 import org.economicsl.auctions.singleunit.pricing.MidPointPricingPolicy
-import org.economicsl.auctions.singleunit.Order
-import org.economicsl.auctions.singleunit.twosided.DoubleAuction
+import org.economicsl.auctions.singleunit.orders.{AskOrder, BidOrder}
+import org.economicsl.auctions.singleunit.twosided.OpenBidDoubleAuction
 
 import scala.concurrent.duration._
 
@@ -35,7 +36,9 @@ class ContinuousDoubleAuctionActor[T <: Tradable](path: String) extends Actor {
   }
 
   def identifying: Receive = {
-    case order: Order[T] =>
+    case order: AskOrder[T] =>
+      auction = auction.insert(order)
+    case order: BidOrder[T] =>
       auction = auction.insert(order)
     case ActorIdentity(_, Some(settlementService)) =>
       context.watch(settlementService)
@@ -46,10 +49,20 @@ class ContinuousDoubleAuctionActor[T <: Tradable](path: String) extends Actor {
   }
 
   def active(settlementService: ActorRef): Receive = {
-    case order: Order[T] =>
+    case order: AskOrder[T] =>
       val result = auction.insert(order).clear  // clearing on receipt of order!
       result.fills.foreach{ fills => settlementService ! fills }
       auction = result.residual
+    case order: BidOrder[T] =>
+      val result = auction.insert(order).clear  // clearing on receipt of order!
+      result.fills.foreach{ fills => settlementService ! fills }
+      auction = result.residual
+    case request: AskPriceQuoteRequest[T] =>
+      sender() ! auction.receive(request)
+    case request: BidPriceQuoteRequest[T] =>
+      sender() ! auction.receive(request)
+    case request: SpreadQuoteRequest[T] =>
+      sender() ! auction.receive(request)
     case Terminated(`settlementService`) =>  // auction service will attempt to re-connect to the settlement service!
       println(s"Settlement Service at ${settlementService.path} terminated!")
       context.become(identifying)
@@ -59,7 +72,7 @@ class ContinuousDoubleAuctionActor[T <: Tradable](path: String) extends Actor {
   def receive: Receive = identifying
 
   /* Double auction using this pricing rule is not incentive compatible for either buyer or seller! */
-  private[this] var auction = DoubleAuction.withDiscriminatoryPricing(new MidPointPricingPolicy[T])
+  private[this] var auction = OpenBidDoubleAuction.withDiscriminatoryPricing(new MidPointPricingPolicy[T])
 
 }
 
