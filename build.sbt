@@ -12,5 +12,5 @@ resolvers ++= Seq(
 libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-actor" % "2.5.1",
   "com.typesafe.akka" %% "akka-remote" % "2.5.1",
-  "org.economicsl" %% "esl-auctions" % "0.1.0-SNAPSHOT"
+  "org.economicsl" %% "esl-auctions" % "0.1.2"
 )
