@@ -16,13 +16,21 @@ limitations under the License.
 package org.economicsl.auctions.actors
 
 import akka.actor.{Actor, ActorLogging}
+import org.economicsl.auctions.Tradable
+import org.economicsl.auctions.singleunit.{ClearResult, Fill}
+import play.api.libs.json.{JsArray, Json}
 
 
 /** Eventually SettlementActor will need to handle settlement of fill contracts. */
 class SettlementActor extends Actor with ActorLogging {
 
   def receive: Receive = {
-    case fills: Stream[_] => fills.foreach(fill => log.info(fill.toString))
+    case ClearResult(fills, _) =>
+      fills.foreach(stream => log.info(toJson(stream.toIndexedSeq).toString))
+  }
+
+  private[this] def toJson[T <: Tradable](fills: IndexedSeq[Fill[T]]): JsArray = {
+    new JsArray(fills.map(fill => Json.toJson(fill)))
   }
 
 }
