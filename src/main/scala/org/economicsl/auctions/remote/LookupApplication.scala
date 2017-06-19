@@ -19,8 +19,9 @@ import java.util.UUID
 
 import akka.actor.{ActorSystem, Props}
 import com.typesafe.config.ConfigFactory
-import org.economicsl.auctions.Tradable
 import org.economicsl.auctions.actors.{ContinuousDoubleAuctionActor, SettlementActor, TradingActor}
+import org.economicsl.auctions.singleunit.pricing.MidPointPricingPolicy
+import org.economicsl.core.securities.Stock
 
 
 object LookupApplication {
@@ -34,7 +35,9 @@ object LookupApplication {
       startRemoteSettlementSystem()
   }
 
-  case class AppleStock(tick: Long = 1) extends Tradable
+  case class AppleStock() extends Stock {
+    val ticker: String = "APPL"
+  }
 
   val tradable: AppleStock = AppleStock()
 
@@ -52,8 +55,11 @@ object LookupApplication {
   /** Starts the remote auction system. */
   def startRemoteAuctionSystem(): Unit = {
     val auctionSystem = ActorSystem("AuctionSystem", ConfigFactory.load("auction"))
+    val pricingPolicy = new MidPointPricingPolicy[AppleStock]()
+    val tickSize = 1L
     val settlementService = "akka://SettlementSystem@127.0.0.1:2554/user/settlement"
-    auctionSystem.actorOf(Props(classOf[ContinuousDoubleAuctionActor[AppleStock]], settlementService), "auction")
+    val auctionProps = Props(classOf[ContinuousDoubleAuctionActor[AppleStock]], pricingPolicy, tickSize, settlementService)
+    auctionSystem.actorOf(auctionProps, "auction")
     println("Started AuctionSystem - waiting for orders!")
   }
 

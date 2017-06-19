@@ -16,16 +16,18 @@ limitations under the License.
 package org.economicsl.auctions.actors
 
 import akka.actor.{Actor, ActorIdentity, ActorRef, Identify, ReceiveTimeout, Terminated}
-import org.economicsl.auctions.Tradable
 import org.economicsl.auctions.quotes.{AskPriceQuoteRequest, BidPriceQuoteRequest, SpreadQuoteRequest}
-import org.economicsl.auctions.singleunit.pricing.MidPointPricingPolicy
+import org.economicsl.auctions.singleunit.pricing.{MidPointPricingPolicy, PricingPolicy}
 import org.economicsl.auctions.singleunit.orders.{AskOrder, BidOrder}
 import org.economicsl.auctions.singleunit.twosided.OpenBidDoubleAuction
+import org.economicsl.core.Tradable
 
 import scala.concurrent.duration._
+import scala.util.{Failure, Success}
 
 
-class ContinuousDoubleAuctionActor[T <: Tradable](path: String) extends Actor {
+class ContinuousDoubleAuctionActor[T <: Tradable](pricingPolicy: PricingPolicy[T], tickSize: Long, path: String)
+    extends Actor {
 
   requestSettlementService()
 
@@ -37,9 +39,17 @@ class ContinuousDoubleAuctionActor[T <: Tradable](path: String) extends Actor {
 
   def identifying: Receive = {
     case order: AskOrder[T] =>
-      auction = auction.insert(order)
+      auction.insert(order) match {
+        case Success(updated) =>
+          auction = updated
+        case Failure(ex) => ???
+      }
     case order: BidOrder[T] =>
-      auction = auction.insert(order)
+      auction.insert(order) match {
+        case Success(updated) =>
+          auction = updated
+        case Failure(ex) => ???
+      }
     case ActorIdentity(_, Some(settlementService)) =>
       context.watch(settlementService)
       context.become(active(settlementService))
@@ -50,13 +60,21 @@ class ContinuousDoubleAuctionActor[T <: Tradable](path: String) extends Actor {
 
   def active(settlementService: ActorRef): Receive = {
     case order: AskOrder[T] =>
-      val result = auction.insert(order).clear  // clearing on receipt of order!
-      result.fills.foreach{ fills => settlementService ! fills }
-      auction = result.residual
+      auction.insert(order) match {  // clearing on receipt of order!
+        case Success(updated) =>
+          val result = updated.clear
+          result.fills.foreach{ fills => settlementService ! fills }
+          auction = result.residual
+        case Failure(ex) => ???
+      }
     case order: BidOrder[T] =>
-      val result = auction.insert(order).clear  // clearing on receipt of order!
-      result.fills.foreach{ fills => settlementService ! fills }
-      auction = result.residual
+      auction.insert(order) match {  // clearing on receipt of order!
+        case Success(updated) =>
+          val result = updated.clear
+          result.fills.foreach{ fills => settlementService ! fills }
+          auction = result.residual
+        case Failure(ex) => ???
+      }
     case request: AskPriceQuoteRequest[T] =>
       sender() ! auction.receive(request)
     case request: BidPriceQuoteRequest[T] =>
@@ -72,7 +90,7 @@ class ContinuousDoubleAuctionActor[T <: Tradable](path: String) extends Actor {
   def receive: Receive = identifying
 
   /* Double auction using this pricing rule is not incentive compatible for either buyer or seller! */
-  private[this] var auction = OpenBidDoubleAuction.withDiscriminatoryPricing(new MidPointPricingPolicy[T])
+  private[this] var auction = OpenBidDoubleAuction.withDiscriminatoryPricing(new MidPointPricingPolicy[T], tickSize)
 
 }
 

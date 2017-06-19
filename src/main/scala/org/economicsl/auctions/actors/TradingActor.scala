@@ -20,7 +20,7 @@ import java.util.UUID
 import akka.actor.{Actor, ActorIdentity, ActorLogging, ActorRef, Identify, ReceiveTimeout, Terminated}
 import org.economicsl.auctions.quotes._
 import org.economicsl.auctions.singleunit.orders.{LimitAskOrder, LimitBidOrder}
-import org.economicsl.auctions.{Price, Tradable}
+import org.economicsl.core.{Price, Tradable}
 
 import scala.concurrent.duration._
 import scala.util.Random
