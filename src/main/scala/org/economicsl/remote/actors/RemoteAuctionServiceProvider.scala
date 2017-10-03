@@ -11,7 +11,7 @@ trait RemoteAuctionServiceProvider
   def auctionServicePath: String
 
   override def receive: Receive = {
-    case ActorIdentity("auctionService", maybeActorRef) =>
+    case message @ ActorIdentity("auctionService", maybeActorRef) =>
       maybeActorRef match {
         case Some(actorRef) =>
           context.watch(actorRef)
@@ -20,6 +20,7 @@ trait RemoteAuctionServiceProvider
         case None =>
           ???  // todo what should happen in this case? Log as a warning? Then retry? Could be that auction actor has not yet started?
       }
+      super.receive(message)
     case Terminated(actorRef) if auctionService.contains(actorRef) =>
       context.unwatch(actorRef)
       identifyAuctionService(auctionServicePath)

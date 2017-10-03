@@ -48,6 +48,10 @@ class RemoteAuctionParticipantActor[P <: AuctionParticipant[P]](
 
 
   override def receive: Receive = {
+    case message: AuctionProtocol[Tradable] =>
+      log.info(message.toString)
+      scheduleOrderIssuance(delay, message, executionContext)
+      super.receive(message)
     case message =>
       log.info(message.toString)
       super.receive(message)

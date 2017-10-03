@@ -34,7 +34,6 @@ class ContinuousDoubleAuctionActor[T <: Tradable](
   val settlementServicePath: String)
     extends AuctionActor[T, OpenBidAuction[T]]
     with BidderActivityClearingSchedule[T, OpenBidAuction[T]]
-    with BidderActivityQuotingSchedule[T]
     with RemoteSettlementServiceProvider {
 
   override def receive: Receive = {

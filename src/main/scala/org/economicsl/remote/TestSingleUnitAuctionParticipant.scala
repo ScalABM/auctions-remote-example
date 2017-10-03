@@ -16,16 +16,14 @@ class TestSingleUnitAuctionParticipant private (
     extends SingleUnitAuctionParticipant {
 
   def issueOrder[T <: Tradable](protocol: AuctionProtocol[T]): Option[(TestSingleUnitAuctionParticipant, (Token, SingleUnitOrder[T]))] = {
-    prices.get(protocol.tradable) flatMap { price =>
-      valuations.get(protocol.tradable) map { valuation =>
-        if (price < valuation) {
-          val limit = largestMultipleOf(protocol.tickSize, valuation)  // insures that limit price is strictly less than valuation!
-          (this, (randomToken(), SingleUnitBidOrder(issuer, limit, protocol.tradable)))
-        } else {
-          val limit = smallestMultipleOf(protocol.tickSize, valuation)  // insures that limit price is strictly greater than valuation!
-          (this, (randomToken(), SingleUnitAskOrder(issuer, limit, protocol.tradable)))
-        }
-      }
+    val price = prices(protocol.tradable)
+    val valuation = valuations(protocol.tradable)
+    if (price < valuation) {
+      val limit = largestMultipleOf(protocol.tickSize, valuation)  // insures that limit price is strictly less than valuation!
+      Some((this, (randomToken(), SingleUnitBidOrder(issuer, limit, protocol.tradable))))
+    } else {
+      val limit = smallestMultipleOf(protocol.tickSize, valuation)  // insures that limit price is strictly greater than valuation!
+      Some((this, (randomToken(), SingleUnitAskOrder(issuer, limit, protocol.tradable))))
     }
   }
 

@@ -74,7 +74,6 @@ object LookupApplication extends App {
     val tradable: AppleStock = AppleStock()
     val protocol = AuctionProtocol(tradable)
     val auction = OpenBidAuction.withDiscriminatoryClearingPolicy(pricingPolicy, protocol)
-    println(auction.protocol)
     val auctionProps = ContinuousDoubleAuctionActor.props[AppleStock](auction, settlementServicePath)
     auctionSystem.actorOf(auctionProps, "auction")
     println("Started AuctionSystem - waiting for orders!")

@@ -17,7 +17,7 @@ trait RemoteSettlementServiceProvider
   }
 
   override def receive: Receive = {
-    case ActorIdentity("settlementService", maybeActorRef) =>
+    case message @ ActorIdentity("settlementService", maybeActorRef) =>
       maybeActorRef match {
         case Some(actorRef) =>
           context.watch(actorRef)
@@ -25,6 +25,7 @@ trait RemoteSettlementServiceProvider
         case None =>
           ???  // todo what should happen in this case? Log as a warning? Then retry? Could be that settlement actor has not yet started?
       }
+      super.receive(message)
     case Terminated(actorRef) if settlementService.contains(actorRef) =>
       context.unwatch(actorRef)
       identifySettlementService(settlementServicePath)
