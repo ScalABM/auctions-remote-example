@@ -43,13 +43,15 @@ class RemoteAuctionParticipantActor[P <: AuctionParticipant[P]](
     identifyAuctionService(auctionServicePath)
   }
 
+  // use the actor's default dispatcher as the execution context
+  val executionContext: ExecutionContext = context.dispatcher
+
+
   override def receive: Receive = {
     case message =>
       log.info(message.toString)
       super.receive(message)
   }
-
-  val executionContext: ExecutionContext = context.dispatcher
 
   protected var auctions: Map[AuctionProtocol[Tradable], ActorRef] = Map.empty[AuctionProtocol[Tradable], ActorRef]
 
