@@ -15,82 +15,42 @@ limitations under the License.
 */
 package org.economicsl.remote.actors
 
-import akka.actor.{Actor, ActorIdentity, ActorRef, Identify, ReceiveTimeout, Terminated}
-import org.economicsl.auctions.quotes.{AskPriceQuoteRequest, BidPriceQuoteRequest, SpreadQuoteRequest}
-import org.economicsl.auctions.singleunit.pricing.{MidPointPricingPolicy, PricingPolicy}
-import org.economicsl.auctions.singleunit.orders.{AskOrder, BidOrder}
-import org.economicsl.auctions.singleunit.twosided.OpenBidDoubleAuction
+import akka.actor.{ActorIdentity, Props}
+import org.economicsl.auctions.actors.{AuctionActor, BidderActivityClearingSchedule, BidderActivityQuotingSchedule}
+import org.economicsl.auctions.singleunit.OpenBidAuction
 import org.economicsl.core.Tradable
 
-import scala.concurrent.duration._
-import scala.util.{Failure, Success}
 
+/**
+  *
+  * @param auction
+  * @param settlementServicePath
+  * @tparam T
+  * @author davidrpugh
+  * @since 0.1.0
+  */
+class ContinuousDoubleAuctionActor[T <: Tradable](
+  protected var auction: OpenBidAuction[T],
+  val settlementServicePath: String)
+    extends AuctionActor[T, OpenBidAuction[T]]
+    with BidderActivityClearingSchedule[T, OpenBidAuction[T]]
+    with BidderActivityQuotingSchedule[T]
+    with RemoteSettlementServiceProvider {
 
-class ContinuousDoubleAuctionActor[T <: Tradable](pricingPolicy: PricingPolicy[T], tickSize: Long, path: String)
-    extends Actor {
-
-  requestSettlementService()
-
-  def requestSettlementService(): Unit = {
-    val settlementService = context.actorSelection(path)
-    settlementService ! Identify()
-    context.system.scheduler.scheduleOnce(3.seconds, self, ReceiveTimeout)(context.system.dispatcher)
+  override def receive: Receive = {
+    case message =>
+      log.info(message.toString)
+      super.receive(message)
   }
 
-  def identifying: Receive = {
-    case order: AskOrder[T] =>
-      auction.insert(order) match {
-        case Success(updated) =>
-          auction = updated
-        case Failure(ex) => ???
-      }
-    case order: BidOrder[T] =>
-      auction.insert(order) match {
-        case Success(updated) =>
-          auction = updated
-        case Failure(ex) => ???
-      }
-    case ActorIdentity(_, Some(settlementService)) =>
-      context.watch(settlementService)
-      context.become(active(settlementService))
-    case ActorIdentity(_, None) =>
-      println(s"Settlement service not available at $path")
-    case ReceiveTimeout => requestSettlementService()
+}
+
+
+object ContinuousDoubleAuctionActor {
+
+  def props[T <: Tradable](auction: OpenBidAuction[T], settlementServicePath: String): Props = {
+    Props(new ContinuousDoubleAuctionActor[T](auction, settlementServicePath))
   }
-
-  def active(settlementService: ActorRef): Receive = {
-    case order: AskOrder[T] =>
-      auction.insert(order) match {  // clearing on receipt of order!
-        case Success(updated) =>
-          val result = updated.clear
-          result.fills.foreach{ fills => settlementService ! fills }
-          auction = result.residual
-        case Failure(ex) => ???
-      }
-    case order: BidOrder[T] =>
-      auction.insert(order) match {  // clearing on receipt of order!
-        case Success(updated) =>
-          val result = updated.clear
-          result.fills.foreach{ fills => settlementService ! fills }
-          auction = result.residual
-        case Failure(ex) => ???
-      }
-    case request: AskPriceQuoteRequest[T] =>
-      sender() ! auction.receive(request)
-    case request: BidPriceQuoteRequest[T] =>
-      sender() ! auction.receive(request)
-    case request: SpreadQuoteRequest[T] =>
-      sender() ! auction.receive(request)
-    case Terminated(`settlementService`) =>  // auction service will attempt to re-connect to the settlement service!
-      println(s"Settlement Service at ${settlementService.path} terminated!")
-      context.become(identifying)
-      requestSettlementService()
-  }
-
-  def receive: Receive = identifying
-
-  /* Double auction using this pricing rule is not incentive compatible for either buyer or seller! */
-  private[this] var auction = OpenBidDoubleAuction.withDiscriminatoryPricing(new MidPointPricingPolicy[T], tickSize)
 
 }
 

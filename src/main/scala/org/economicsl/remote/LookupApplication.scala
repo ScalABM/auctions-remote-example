@@ -16,24 +16,33 @@ limitations under the License.
 package org.economicsl.remote
 
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 
 import akka.actor.{ActorSystem, Props}
 import com.typesafe.config.ConfigFactory
-import org.economicsl.auctions.actors.{ContinuousDoubleAuctionActor, SettlementActor, TradingActor}
+import org.economicsl.auctions.AuctionProtocol
+import org.economicsl.auctions.actors.LoggingSettlementActor
+import org.economicsl.auctions.singleunit.OpenBidAuction
+import org.economicsl.auctions.singleunit.participants.SingleUnitAuctionParticipant
 import org.economicsl.auctions.singleunit.pricing.MidPointPricingPolicy
+import org.economicsl.core.{Price, Tradable}
 import org.economicsl.core.securities.Stock
+import org.economicsl.remote.actors.{ContinuousDoubleAuctionActor, RemoteAuctionParticipantActor}
+
+import scala.util.Random
 
 
-object LookupApplication {
+object LookupApplication extends App {
 
-  def main(args: Array[String]): Unit = {
-    if (args.isEmpty || args.head == "Trading")
-      startRemoteTradingSystem()
-    if (args.isEmpty || args.head == "Auction")
-      startRemoteAuctionSystem()
-    if (args.isEmpty || args.head == "Settlement")
-      startRemoteSettlementSystem()
-  }
+  /** Key piece of information that both the AuctionActor and AuctionParticipantActors must know! */
+  val settlementServicePath = "akka://SettlementSystem@127.0.0.1:2554/user/settlement"
+
+  if (args.isEmpty || args.head == "Settlement")
+    startRemoteSettlementSystem()
+  if (args.isEmpty || args.head == "Auction")
+    startRemoteAuctionSystem()
+  if (args.isEmpty || args.head == "Trading")
+    startRemoteTradingSystem()
 
   case class AppleStock() extends Stock {
     val ticker: String = "APPL"
@@ -44,10 +53,17 @@ object LookupApplication {
   /** Starts the remote trading system. */
   def startRemoteTradingSystem(): Unit = {
     val tradingSystem = ActorSystem("TradingSystem", ConfigFactory.load("trading"))
-    val auctionService = "akka://AuctionSystem@127.0.0.1:2553/user/auction"
+    val auctionServicePath = "akka://AuctionSystem@127.0.0.1:2553/user/auction"
+    val initialPrices: Map[Tradable, Price] = Map(tradable -> Price(100))  // todo this information should be passed from the auction to the participant upon registration!
     for (i <- 1 to 10) yield {
       val issuer = UUID.randomUUID()
-      tradingSystem.actorOf(Props(classOf[TradingActor[AppleStock]], issuer, auctionService, tradable), issuer.toString)
+      val valuations: Map[Tradable, Price] = Map(tradable -> Price(Random.nextInt(200)))
+      val participant: SingleUnitAuctionParticipant = TestSingleUnitAuctionParticipant(issuer, initialPrices, valuations)
+      val lambda = 0.5
+      val prng = new Random()
+      val timeUnit = TimeUnit.SECONDS
+      val participantProps = RemoteAuctionParticipantActor.props(participant, lambda, prng, timeUnit, auctionServicePath, settlementServicePath)
+      tradingSystem.actorOf(participantProps, issuer.toString)
     }
     println("Started TradingSystem!")
   }
@@ -56,9 +72,9 @@ object LookupApplication {
   def startRemoteAuctionSystem(): Unit = {
     val auctionSystem = ActorSystem("AuctionSystem", ConfigFactory.load("auction"))
     val pricingPolicy = new MidPointPricingPolicy[AppleStock]()
-    val tickSize = 1L
-    val settlementService = "akka://SettlementSystem@127.0.0.1:2554/user/settlement"
-    val auctionProps = Props(classOf[ContinuousDoubleAuctionActor[AppleStock]], pricingPolicy, tickSize, settlementService)
+    val protocol = AuctionProtocol(tradable)
+    val auction = OpenBidAuction.withDiscriminatoryClearingPolicy(pricingPolicy, protocol)
+    val auctionProps = ContinuousDoubleAuctionActor.props[AppleStock](auction, settlementServicePath)
     auctionSystem.actorOf(auctionProps, "auction")
     println("Started AuctionSystem - waiting for orders!")
   }
@@ -71,8 +87,8 @@ object LookupApplication {
     */
   def startRemoteSettlementSystem(): Unit = {
     val settlementSystem = ActorSystem("SettlementSystem", ConfigFactory.load("settlement"))
-    settlementSystem.actorOf(Props[SettlementActor], "settlement")
-    println("Started SettlementSystem - waiting for fills!")
+    settlementSystem.actorOf(Props[LoggingSettlementActor], "settlement")
+    println("Started SettlementSystem - waiting for contracts!")
   }
 
 }
