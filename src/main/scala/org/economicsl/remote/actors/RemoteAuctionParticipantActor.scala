@@ -15,10 +15,12 @@ limitations under the License.
 */
 package org.economicsl.remote.actors
 
-import akka.actor.{ActorIdentity, ActorRef, Props}
+import akka.actor.{ActorRef, Props}
 import org.economicsl.auctions.{AuctionParticipant, AuctionProtocol}
-import org.economicsl.auctions.actors.{AuctionParticipantActor, PoissonOrderIssuingSchedule}
-import org.economicsl.core.{Price, Tradable}
+import org.economicsl.auctions.actors.schedules.{PoissonAuctionDataRequestSchedule, PoissonOrderIssuingSchedule}
+import org.economicsl.auctions.actors.AuctionParticipantActor
+import org.economicsl.auctions.messages.{AuctionDataResponse, MidPointPriceQuote}
+import org.economicsl.core.Tradable
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -34,6 +36,7 @@ class RemoteAuctionParticipantActor[P <: AuctionParticipant[P]](
   val settlementServicePath: String)
     extends AuctionParticipantActor[P]
     with PoissonOrderIssuingSchedule[P]
+    with PoissonAuctionDataRequestSchedule[P]
     with RemoteAuctionServiceProvider
     with RemoteSettlementServiceProvider {
 
@@ -51,6 +54,10 @@ class RemoteAuctionParticipantActor[P <: AuctionParticipant[P]](
     case message: AuctionProtocol[Tradable] =>
       log.info(message.toString)
       scheduleOrderIssuance(delay, message, executionContext)
+      scheduleRequestAuctionData(delay, message, executionContext)
+      super.receive(message)
+    case message @ AuctionDataResponse(data: MidPointPriceQuote, _, _, _) =>
+      log.info(message.toString)
       super.receive(message)
     case message =>
       log.info(message.toString)

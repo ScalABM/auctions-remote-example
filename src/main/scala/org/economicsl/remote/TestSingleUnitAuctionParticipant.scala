@@ -3,8 +3,10 @@ package org.economicsl.remote
 import java.util.UUID
 
 import org.economicsl.auctions._
+import org.economicsl.auctions.messages.{AuctionDataRequest, MidPointPriceQuoteRequest}
 import org.economicsl.auctions.singleunit.orders.{SingleUnitAskOrder, SingleUnitBidOrder, SingleUnitOrder}
 import org.economicsl.auctions.singleunit.participants.SingleUnitAuctionParticipant
+import org.economicsl.core.util.Timestamper
 import org.economicsl.core.{Currency, Price, Tradable}
 
 
@@ -13,7 +15,8 @@ class TestSingleUnitAuctionParticipant private (
   val outstandingOrders: Map[Token, (Reference, Order[Tradable])],
   val prices: Map[Tradable, Price],
   val valuations: Map[Tradable, Price])
-    extends SingleUnitAuctionParticipant {
+    extends SingleUnitAuctionParticipant
+    with Timestamper {
 
   def issueOrder[T <: Tradable](protocol: AuctionProtocol[T]): Option[(TestSingleUnitAuctionParticipant, (Token, SingleUnitOrder[T]))] = {
     val price = prices(protocol.tradable)
@@ -25,6 +28,11 @@ class TestSingleUnitAuctionParticipant private (
       val limit = smallestMultipleOf(protocol.tickSize, valuation)  // insures that limit price is strictly greater than valuation!
       Some((this, (randomToken(), SingleUnitAskOrder(issuer, limit, protocol.tradable))))
     }
+  }
+
+  def requestAuctionData[T <: Tradable](protocol: AuctionProtocol[T]): Option[(SingleUnitAuctionParticipant, (Token, AuctionDataRequest[T]))] = {
+    val token = randomToken()
+    Some((this, (token, MidPointPriceQuoteRequest(issuer, token, currentTimeMillis()))))
   }
 
   def withPrices(updated: Map[Tradable, Price]): TestSingleUnitAuctionParticipant = {

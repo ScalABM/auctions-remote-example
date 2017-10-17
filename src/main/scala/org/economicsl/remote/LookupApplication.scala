@@ -24,7 +24,7 @@ import org.economicsl.auctions.AuctionProtocol
 import org.economicsl.auctions.actors.LoggingSettlementActor
 import org.economicsl.auctions.singleunit.OpenBidAuction
 import org.economicsl.auctions.singleunit.participants.SingleUnitAuctionParticipant
-import org.economicsl.auctions.singleunit.pricing.MidPointPricingPolicy
+import org.economicsl.auctions.singleunit.pricing.MidPointQuotePricingPolicy
 import org.economicsl.core.{Price, Tradable}
 import org.economicsl.core.securities.Stock
 import org.economicsl.remote.actors.{ContinuousDoubleAuctionActor, RemoteAuctionParticipantActor}
@@ -70,7 +70,7 @@ object LookupApplication extends App {
   /** Starts the remote auction system. */
   def startRemoteAuctionSystem(): Unit = {
     val auctionSystem = ActorSystem("AuctionSystem", ConfigFactory.load("auction"))
-    val pricingPolicy = new MidPointPricingPolicy[AppleStock]()
+    val pricingPolicy = MidPointQuotePricingPolicy[AppleStock]()
     val tradable: AppleStock = AppleStock()
     val protocol = AuctionProtocol(tradable)
     val auction = OpenBidAuction.withDiscriminatoryClearingPolicy(pricingPolicy, protocol)
