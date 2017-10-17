@@ -32,7 +32,7 @@ import org.economicsl.remote.actors.{ContinuousDoubleAuctionActor, RemoteAuction
 import scala.util.Random
 
 
-object LookupApplication extends App {
+object RemoteAuctionExampleApp extends App {
 
   /** Key piece of information that both the AuctionActor and AuctionParticipantActors must know! */
   val settlementServicePath = "akka://SettlementSystem@127.0.0.1:2554/user/settlement"

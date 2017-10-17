@@ -3,7 +3,7 @@ package org.economicsl.remote
 import java.util.UUID
 
 import org.economicsl.auctions._
-import org.economicsl.auctions.messages.{AuctionDataRequest, MidPointPriceQuoteRequest}
+import org.economicsl.auctions.messages.{AuctionDataRequest, AuctionDataResponse, MidPointPriceQuoteRequest, PriceQuote}
 import org.economicsl.auctions.singleunit.orders.{SingleUnitAskOrder, SingleUnitBidOrder, SingleUnitOrder}
 import org.economicsl.auctions.singleunit.participants.SingleUnitAuctionParticipant
 import org.economicsl.core.util.Timestamper
@@ -18,15 +18,31 @@ class TestSingleUnitAuctionParticipant private (
     extends SingleUnitAuctionParticipant
     with Timestamper {
 
+  def handle[T <: Tradable](auctionDataResponse: AuctionDataResponse[T]): TestSingleUnitAuctionParticipant = {
+    auctionDataResponse match {
+      case response@AuctionDataResponse(auctionData: PriceQuote[Tradable], _, _, _) =>
+        auctionData.value match {
+          case Some(price) =>
+            withPrices(prices.updated(auctionData.tradable, price))
+          case None =>
+            this
+        }
+      case response =>
+        this
+    }
+  }
+
   def issueOrder[T <: Tradable](protocol: AuctionProtocol[T]): Option[(TestSingleUnitAuctionParticipant, (Token, SingleUnitOrder[T]))] = {
     val price = prices(protocol.tradable)
     val valuation = valuations(protocol.tradable)
     if (price < valuation) {
       val limit = largestMultipleOf(protocol.tickSize, valuation)  // insures that limit price is strictly less than valuation!
       Some((this, (randomToken(), SingleUnitBidOrder(issuer, limit, protocol.tradable))))
-    } else {
+    } else if (price > valuation) {
       val limit = smallestMultipleOf(protocol.tickSize, valuation)  // insures that limit price is strictly greater than valuation!
       Some((this, (randomToken(), SingleUnitAskOrder(issuer, limit, protocol.tradable))))
+    } else {
+      None  // if indifferent then don't trade!
     }
   }
 

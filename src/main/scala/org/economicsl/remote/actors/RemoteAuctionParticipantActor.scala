@@ -56,8 +56,9 @@ class RemoteAuctionParticipantActor[P <: AuctionParticipant[P]](
       scheduleOrderIssuance(delay, message, executionContext)
       scheduleRequestAuctionData(delay, message, executionContext)
       super.receive(message)
-    case message @ AuctionDataResponse(data: MidPointPriceQuote, _, _, _) =>
+    case message : AuctionDataResponse[Tradable] =>
       log.info(message.toString)
+      participant = participant.handle(message)
       super.receive(message)
     case message =>
       log.info(message.toString)
