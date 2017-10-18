@@ -6,16 +6,17 @@ the remote deployment of auction and settlement services as well as look-up of r
 ## Lookup Remote Services
 This example involves three actor systems.
 
-* `TradingSystem` listens on port 2552 and starts potentially several `TradingActor` instances that generate 
-`LimitAskOrder` and `LimitBidOrder` instances and send them to the auction service for processing. I would anticipate 
-some IoT-enabled device to have a JVM process with a `TradingSystem` with a single `TradingActor` instance.
+* `TradingSystem` listens on port 2552 and starts potentially several `AuctionParticipantActor` instances that generate 
+`SingleUnitAskOrder` and `SingleUnitBidOrder` instances and send them to the auction service for processing. I would 
+anticipate some IoT-enabled device to have a JVM process with a `TradingSystem` with a single `AuctionParticipantActor` 
+instance.
 * `AuctionSystem` listens on port 2553 and starts an `AuctionActor` instance that provides services for matching 
-individual buyers and sellers at specific prices and quantities. The auction service generates streams of `Fill` 
+individual buyers and sellers at specific prices and quantities. The auction service generates streams of `SpotContract` 
 instances which are sent to the settlement service for further processing.
-* `SettlementSystem` listens on port 2554 and logs the received streams of `Fill` instances. At some point the 
+* `SettlementSystem` listens on port 2554 and logs the received streams of `SpotContract` instances. At some point the 
 `SettlementSystem` might interact with a `Blockchain` as part of the settlement service.
 
-Opening `LookupApplication.scala`.  There you can see how the three actor systems (and associated actors) are started. 
+Opening `RemoteAuctionExampleApp.scala`.  There you can see how the three actor systems (and associated actors) are started. 
 In what follows we will first run all three systems within the same JVM process before launching each of the three 
 applications in a separate JVM process.
 
@@ -50,10 +51,10 @@ First, let's run the sample application inside a single JVM process. Open a term
 the command line.
 
 ```bash
-sbt "run-main org.economicsl.auctions.remote.LookupApplication"
+sbt "run-main org.economicsl.auctions.remote.RemoteAuctionExampleApp"
 ```
 
-After generating some generic logging cruft, you should start to see `Fill` instances being logged to the terminal 
+After generating some generic logging cruft, you should start to see `SpotContract` instances being logged to the terminal 
 window by the `SettlementActor`. When satisfied that things are working as expected cancel the process and close the 
 terminal window.
 
@@ -61,21 +62,21 @@ Now let's run each of the actor systems remotely in separate JVM processes. Star
 new terminal window and running the following.
 
 ```bash
-sbt "run-main org.economicsl.auctions.remote.LookupApplication Settlement"
+sbt "run-main org.economicsl.auctions.remote.RemoteAuctionExampleApp Settlement"
 ```
 
 This should generate some generic logging cruft followed by a message indicating that the settlement service has been 
 activated.  Next, start the auction system by opening up a new terminal window and running the following.
 
 ```bash
-sbt "run-main org.economicsl.auctions.remote.LookupApplication Auction"
+sbt "run-main org.economicsl.auctions.remote.RemoteAuctionExampleApp Auction"
 ```
 Again, this should generate some logging cruft followed by a message indicating that the auction service is operational. 
 Finally, start the trading system by opening up a new terminal window and running thw following.
 
 ```bash
-sbt "run-main org.economicsl.auctions.remote.LookupApplication Trading"
+sbt "run-main org.economicsl.auctions.remote.RemoteAuctionExampleApp Trading"
 ```
 
-Once the trading system is operational, you should be able to see `Fill` instances being logged to the terminal window 
+Once the trading system is operational, you should be able to see `SpotContract` instances being logged to the terminal window 
 handling the remote settlement service.

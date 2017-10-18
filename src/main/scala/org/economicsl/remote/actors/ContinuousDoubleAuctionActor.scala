@@ -16,8 +16,8 @@ limitations under the License.
 package org.economicsl.remote.actors
 
 import akka.actor.Props
-import org.economicsl.auctions.actors.{AuctionActor, AuctionDataPubSub}
-import org.economicsl.auctions.actors.schedules.{OnDemandAuctionDataPublishingSchedule, BidderActivityClearingSchedule}
+import org.economicsl.auctions.actors.{AuctionActor, AuctionDataPubSub, RemoteSettlementActorRefProvider}
+import org.economicsl.auctions.actors.schedules.{BidderActivityClearingSchedule, OnDemandAuctionDataPublishingSchedule}
 import org.economicsl.auctions.singleunit.OpenBidAuction
 import org.economicsl.core.Tradable
 
@@ -37,7 +37,7 @@ class ContinuousDoubleAuctionActor[T <: Tradable](
     with AuctionDataPubSub[T]
     with BidderActivityClearingSchedule[T, OpenBidAuction[T]]
     with OnDemandAuctionDataPublishingSchedule[T]
-    with RemoteSettlementServiceProvider {
+    with RemoteSettlementActorRefProvider {
 
   override def receive: Receive = {
     case message =>
