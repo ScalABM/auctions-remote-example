@@ -25,7 +25,6 @@ import org.economicsl.auctions.singleunit.participants.SingleUnitAuctionParticip
 import org.economicsl.auctions.singleunit.pricing.MidPointQuotePricingPolicy
 import org.economicsl.core.securities.Stock
 import org.economicsl.core.{Price, Tradable}
-import org.economicsl.remote.actors.RemoteAuctionParticipantActor
 
 import scala.util.Random
 
