@@ -1,5 +1,3 @@
-package org.economicsl.remote
-
 import java.util.UUID
 
 import org.economicsl.auctions._
