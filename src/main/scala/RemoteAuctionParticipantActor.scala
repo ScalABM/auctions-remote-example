@@ -47,7 +47,6 @@ class RemoteAuctionParticipantActor[P <: AuctionParticipant[P]](
   // use the actor's default dispatcher as the execution context
   val executionContext: ExecutionContext = context.dispatcher
 
-
   override def receive: Receive = {
     case message: AuctionProtocol[Tradable] =>
       log.info(message.toString)

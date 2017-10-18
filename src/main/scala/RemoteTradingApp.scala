@@ -16,34 +16,20 @@ limitations under the License.
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
-import akka.actor.{ActorSystem, Props}
+import akka.actor.ActorSystem
 import com.typesafe.config.ConfigFactory
-import org.economicsl.auctions.AuctionProtocol
-import org.economicsl.auctions.actors.LoggingSettlementActor
-import org.economicsl.auctions.singleunit.OpenBidAuction
 import org.economicsl.auctions.singleunit.participants.SingleUnitAuctionParticipant
-import org.economicsl.auctions.singleunit.pricing.MidPointQuotePricingPolicy
-import org.economicsl.core.securities.Stock
 import org.economicsl.core.{Price, Tradable}
 
 import scala.util.Random
 
 
-object RemoteAuctionExampleApp extends App {
+object RemoteTradingApp extends App {
 
   /** Key piece of information that both the AuctionActor and AuctionParticipantActors must know! */
   val settlementServicePath = "akka://SettlementSystem@127.0.0.1:2554/user/settlement"
 
-  if (args.isEmpty || args.head == "Settlement")
-    startRemoteSettlementSystem()
-  if (args.isEmpty || args.head == "Auction")
-    startRemoteAuctionSystem()
-  if (args.isEmpty || args.head == "Trading")
-    startRemoteTradingSystem()
-
-  case class AppleStock() extends Stock {
-    val ticker: String = "APPL"
-  }
+  startRemoteTradingSystem()
 
   /** Starts the remote trading system. */
   def startRemoteTradingSystem(): Unit = {
@@ -62,30 +48,6 @@ object RemoteAuctionExampleApp extends App {
       tradingSystem.actorOf(participantProps, issuer.toString)
     }
     println("Started TradingSystem!")
-  }
-
-  /** Starts the remote auction system. */
-  def startRemoteAuctionSystem(): Unit = {
-    val auctionSystem = ActorSystem("AuctionSystem", ConfigFactory.load("auction"))
-    val pricingPolicy = MidPointQuotePricingPolicy[AppleStock]()
-    val tradable: AppleStock = AppleStock()
-    val protocol = AuctionProtocol(tradable)
-    val auction = OpenBidAuction.withDiscriminatoryClearingPolicy(pricingPolicy, protocol)
-    val auctionProps = RemoteAuctionServiceActor.props[AppleStock](auction, settlementServicePath)
-    auctionSystem.actorOf(auctionProps, "auction")
-    println("Started AuctionSystem - waiting for orders!")
-  }
-
-  /** Starts the remote settlement system.
-    *
-    * @note Remote settlement system could reside on same JVM as the auction system; however, generally many auction
-    *       systems might share a common settlement system. In these case it probably makes more sense for a settlement
-    *       system to be on a separate JVM.
-    */
-  def startRemoteSettlementSystem(): Unit = {
-    val settlementSystem = ActorSystem("SettlementSystem", ConfigFactory.load("settlement"))
-    settlementSystem.actorOf(Props[LoggingSettlementActor], "settlement")
-    println("Started SettlementSystem - waiting for contracts!")
   }
 
 }
