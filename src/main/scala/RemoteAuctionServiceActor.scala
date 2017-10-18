@@ -13,11 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package org.economicsl.remote.actors
-
 import akka.actor.Props
-import org.economicsl.auctions.actors.{AuctionActor, AuctionDataPubSub, RemoteSettlementActorRefProvider}
 import org.economicsl.auctions.actors.schedules.{BidderActivityClearingSchedule, OnDemandAuctionDataPublishingSchedule}
+import org.economicsl.auctions.actors.{AuctionActor, AuctionDataPubSub, RemoteSettlementActorRefProvider}
 import org.economicsl.auctions.singleunit.OpenBidAuction
 import org.economicsl.core.Tradable
 
@@ -30,7 +28,7 @@ import org.economicsl.core.Tradable
   * @author davidrpugh
   * @since 0.1.0
   */
-class ContinuousDoubleAuctionActor[T <: Tradable](
+class RemoteAuctionServiceActor[T <: Tradable](
   protected var auction: OpenBidAuction[T],
   val settlementServicePath: String)
     extends AuctionActor[T, OpenBidAuction[T]]
@@ -48,10 +46,10 @@ class ContinuousDoubleAuctionActor[T <: Tradable](
 }
 
 
-object ContinuousDoubleAuctionActor {
+object RemoteAuctionServiceActor {
 
   def props[T <: Tradable](auction: OpenBidAuction[T], settlementServicePath: String): Props = {
-    Props(new ContinuousDoubleAuctionActor[T](auction, settlementServicePath))
+    Props(new RemoteAuctionServiceActor[T](auction, settlementServicePath))
   }
 
 }

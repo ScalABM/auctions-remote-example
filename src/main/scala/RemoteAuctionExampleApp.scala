@@ -13,8 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package org.economicsl.remote
-
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
@@ -25,9 +23,9 @@ import org.economicsl.auctions.actors.LoggingSettlementActor
 import org.economicsl.auctions.singleunit.OpenBidAuction
 import org.economicsl.auctions.singleunit.participants.SingleUnitAuctionParticipant
 import org.economicsl.auctions.singleunit.pricing.MidPointQuotePricingPolicy
-import org.economicsl.core.{Price, Tradable}
 import org.economicsl.core.securities.Stock
-import org.economicsl.remote.actors.{ContinuousDoubleAuctionActor, RemoteAuctionParticipantActor}
+import org.economicsl.core.{Price, Tradable}
+import org.economicsl.remote.actors.RemoteAuctionParticipantActor
 
 import scala.util.Random
 
@@ -74,7 +72,7 @@ object RemoteAuctionExampleApp extends App {
     val tradable: AppleStock = AppleStock()
     val protocol = AuctionProtocol(tradable)
     val auction = OpenBidAuction.withDiscriminatoryClearingPolicy(pricingPolicy, protocol)
-    val auctionProps = ContinuousDoubleAuctionActor.props[AppleStock](auction, settlementServicePath)
+    val auctionProps = RemoteAuctionServiceActor.props[AppleStock](auction, settlementServicePath)
     auctionSystem.actorOf(auctionProps, "auction")
     println("Started AuctionSystem - waiting for orders!")
   }

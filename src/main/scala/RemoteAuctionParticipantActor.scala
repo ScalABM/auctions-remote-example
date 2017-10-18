@@ -13,13 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package org.economicsl.remote.actors
-
 import akka.actor.{ActorRef, Props}
-import org.economicsl.auctions.{AuctionParticipant, AuctionProtocol}
 import org.economicsl.auctions.actors.schedules.{PoissonAuctionDataRequestSchedule, PoissonOrderIssuingSchedule}
 import org.economicsl.auctions.actors.{AuctionParticipantActor, RemoteAuctionActorRefProvider, RemoteSettlementActorRefProvider}
-import org.economicsl.auctions.messages.{AuctionDataResponse, MidPointPriceQuote}
+import org.economicsl.auctions.messages.AuctionDataResponse
+import org.economicsl.auctions.{AuctionParticipant, AuctionProtocol}
 import org.economicsl.core.Tradable
 
 import scala.concurrent.ExecutionContext
