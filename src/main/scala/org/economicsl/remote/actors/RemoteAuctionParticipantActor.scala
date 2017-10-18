@@ -18,7 +18,7 @@ package org.economicsl.remote.actors
 import akka.actor.{ActorRef, Props}
 import org.economicsl.auctions.{AuctionParticipant, AuctionProtocol}
 import org.economicsl.auctions.actors.schedules.{PoissonAuctionDataRequestSchedule, PoissonOrderIssuingSchedule}
-import org.economicsl.auctions.actors.AuctionParticipantActor
+import org.economicsl.auctions.actors.{AuctionParticipantActor, RemoteAuctionActorRefProvider, RemoteSettlementActorRefProvider}
 import org.economicsl.auctions.messages.{AuctionDataResponse, MidPointPriceQuote}
 import org.economicsl.core.Tradable
 
@@ -37,8 +37,8 @@ class RemoteAuctionParticipantActor[P <: AuctionParticipant[P]](
     extends AuctionParticipantActor[P]
     with PoissonOrderIssuingSchedule[P]
     with PoissonAuctionDataRequestSchedule[P]
-    with RemoteAuctionServiceProvider
-    with RemoteSettlementServiceProvider {
+    with RemoteAuctionActorRefProvider
+    with RemoteSettlementActorRefProvider {
 
   @scala.throws[Exception](classOf[Exception])
   override def preStart(): Unit = {
@@ -65,7 +65,7 @@ class RemoteAuctionParticipantActor[P <: AuctionParticipant[P]](
       super.receive(message)
   }
 
-  protected var auctions: Map[AuctionProtocol[Tradable], ActorRef] = Map.empty[AuctionProtocol[Tradable], ActorRef]
+  protected var auctionActorRefsByTradable: Map[Tradable, ActorRef] = Map.empty
 
 }
 
