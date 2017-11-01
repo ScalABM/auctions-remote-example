@@ -13,10 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-import akka.actor.{ActorRef, Props}
+import java.util.UUID
+
+import akka.actor.{ActorIdentity, ActorRef, Props}
 import org.economicsl.auctions.actors.schedules.{PoissonAuctionDataRequestSchedule, PoissonOrderIssuingSchedule}
 import org.economicsl.auctions.actors.{AuctionParticipantActor, RemoteAuctionActorRefProvider, RemoteSettlementActorRefProvider}
-import org.economicsl.auctions.messages.AuctionDataResponse
+import org.economicsl.auctions.messages.{AuctionDataResponse, NewRegistration}
 import org.economicsl.auctions.{AuctionParticipant, AuctionProtocol}
 import org.economicsl.core.Tradable
 
@@ -48,6 +50,10 @@ class RemoteAuctionParticipantActor[P <: AuctionParticipant[P]](
   val executionContext: ExecutionContext = context.dispatcher
 
   override def receive: Receive = {
+    case message @ ActorIdentity("auctionService", Some(actorRef)) =>
+      log.info(message.toString)
+      actorRef ! NewRegistration(UUID.randomUUID())  // todo add UUID generator
+      super.receive(message)
     case message: AuctionProtocol[Tradable] =>
       log.info(message.toString)
       scheduleOrderIssuance(delay, message, executionContext)

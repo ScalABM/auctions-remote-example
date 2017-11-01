@@ -35,13 +35,12 @@ object RemoteTradingApp extends App {
   def startRemoteTradingSystem(): Unit = {
     val tradingSystem = ActorSystem("TradingSystem", ConfigFactory.load("trading"))
     val auctionServicePath = "akka://AuctionSystem@127.0.0.1:2553/user/auction"
-    val initialPrices: Map[Tradable, Price] = Map.empty.withDefaultValue(Price(100))  // todo this information should be passed from the auction to the participant upon registration!
     for (i <- 1 to 10) yield {
       val issuer = UUID.randomUUID()
       val prng = new Random()
       val randomInitialValuation = Price(prng.nextInt(200))
       val valuations: Map[Tradable, Price] = Map.empty.withDefaultValue(randomInitialValuation)  // todo need better mechanism for initializing valuations!
-      val participant: SingleUnitAuctionParticipant = TestSingleUnitAuctionParticipant(issuer, initialPrices, valuations)
+      val participant: SingleUnitAuctionParticipant = TestSingleUnitAuctionParticipant(issuer, valuations)
       val lambda = 0.5
       val timeUnit = TimeUnit.SECONDS
       val participantProps = RemoteAuctionParticipantActor.props(participant, lambda, prng, timeUnit, auctionServicePath, settlementServicePath)

@@ -18,29 +18,28 @@ class TestSingleUnitAuctionParticipant private (
 
   def handle[T <: Tradable](auctionDataResponse: AuctionDataResponse[T]): TestSingleUnitAuctionParticipant = {
     auctionDataResponse match {
-      case response@AuctionDataResponse(auctionData: PriceQuote[Tradable], _, _, _) =>
+      case AuctionDataResponse(auctionData: PriceQuote[Tradable], _, _, _) =>
         auctionData.value match {
           case Some(price) =>
             withPrices(prices.updated(auctionData.tradable, price))
           case None =>
             this
         }
-      case response =>
+      case _ =>
         this
     }
   }
 
   def issueOrder[T <: Tradable](protocol: AuctionProtocol[T]): Option[(TestSingleUnitAuctionParticipant, (Token, SingleUnitOrder[T]))] = {
-    val price = prices(protocol.tradable)
-    val valuation = valuations(protocol.tradable)
-    if (price < valuation) {
-      val limit = largestMultipleOf(protocol.tickSize, valuation)  // insures that limit price is strictly less than valuation!
-      Some((this, (randomToken(), SingleUnitBidOrder(issuer, limit, protocol.tradable))))
-    } else if (price > valuation) {
-      val limit = smallestMultipleOf(protocol.tickSize, valuation)  // insures that limit price is strictly greater than valuation!
-      Some((this, (randomToken(), SingleUnitAskOrder(issuer, limit, protocol.tradable))))
-    } else {
-      None  // if indifferent then don't trade!
+    valuations.get(protocol.tradable).map{ valuation =>
+      val price = prices.getOrElse(protocol.tradable, valuation)
+      if (price < valuation) {
+        val limit = largestMultipleOf(protocol.tickSize, valuation)  // insures that limit price is strictly less than valuation!
+        (this, (randomToken(), SingleUnitBidOrder(issuer, limit, protocol.tradable)))
+      } else {
+        val limit = smallestMultipleOf(protocol.tickSize, valuation)  // insures that limit price is strictly greater than valuation!
+        (this, (randomToken(), SingleUnitAskOrder(issuer, limit, protocol.tradable)))
+      }
     }
   }
 
@@ -76,14 +75,9 @@ class TestSingleUnitAuctionParticipant private (
 
 object TestSingleUnitAuctionParticipant {
 
-  def apply(issuer: Issuer, prices: Map[Tradable, Price], valuations: Map[Tradable, Price]): TestSingleUnitAuctionParticipant = {
+  def apply(issuer: Issuer, valuations: Map[Tradable, Price]): TestSingleUnitAuctionParticipant = {
     val outstandingOrders = Map.empty[Token, (Reference, Order[Tradable])]
-    new TestSingleUnitAuctionParticipant(issuer, outstandingOrders, prices, valuations)
-  }
-
-  def apply(prices: Map[Tradable, Price], valuations: Map[Tradable, Price]): TestSingleUnitAuctionParticipant = {
-    val issuer = UUID.randomUUID()
-    val outstandingOrders = Map.empty[Token, (Reference, Order[Tradable])]
+    val prices = Map.empty[Tradable, Price]
     new TestSingleUnitAuctionParticipant(issuer, outstandingOrders, prices, valuations)
   }
 
